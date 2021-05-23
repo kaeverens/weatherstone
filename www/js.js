@@ -3,6 +3,31 @@ const classNames = ['Overcast', 'Sunny', 'Raining', 'Breezy', 'Wet', 'Dry'];
 classifier = knnClassifier.create();
 async function app() {
 	let currentSrc;
+	async function addExample(className) {
+		$.post('/php/trainingAdd.php', {
+			className:className,
+			image:currentSrc
+		}, r=>{
+			if (r.error) {
+				alert(r.error);
+			}
+		});
+		const activation = net.infer($img[0], true);
+		classifier.addExample(activation, className);
+	}
+	async function classify() {
+    if (classifier.getNumClasses() > 0) {
+      const img = $img[0];
+
+      // Get the activation from mobilenet from the webcam.
+      const activation = net.infer(img, 'conv_preds');
+      // Get the most likely class and confidence from the classifier module.
+      const results = await classifier.predictClass(activation);
+			showResults(results);
+      // Dispose the tensor to release the memory.
+    }
+		setTimeout(getNextImage, 10000);
+	}
 	function getNextImage() {
 		$.post('/php/image-get.php', r=>{
 			$('#filename').text(r.url);
@@ -20,43 +45,52 @@ async function app() {
 		});
 		$('#results').empty().append($table);
 	}
-	async function classify() {
-    if (classifier.getNumClasses() > 0) {
-      const img = $img[0];
-
-      // Get the activation from mobilenet from the webcam.
-      const activation = net.infer(img, 'conv_preds');
-      // Get the most likely class and confidence from the classifier module.
-      const results = await classifier.predictClass(activation);
-			showResults(results);
-      // Dispose the tensor to release the memory.
-    }
-		setTimeout(getNextImage, 10000);
-	}
 	$img=$('#img');
 	$img.on('load', classify);
 	net=await mobilenet.load();
-	getNextImage();
 	const $classifiers=$('#classifiers')
 		.on('click', 'button', function() {
 			addExample($(this).text());
 		});
-	for (let i=0;i<classNames.length;++i) {
-		$('<button data-idx="'+i+'"/>').text(classNames[i]).appendTo($classifiers);
-	}
-	async function addExample(className) {
-		const activation = net.infer($img[0], true);
-		$.post('/php/trainingAdd.php', {
-			className:className,
-			image:currentSrc
-		}, r=>{
-			console.log(r);
-			if (r.error) {
-				alert(r.error);
-			}
+	if (Object.keys(training_data).length) {
+		let numTrainingImages=0, trainingImages=[];
+		Object.keys(training_data).forEach(k=>{
+			$('<button/>').text(k).prependTo($classifiers);
+			training_data[k].forEach(n=>{
+				numTrainingImages++;
+				trainingImages.push([k, n]);
+			});
 		});
-		classifier.addExample(activation, className);
+		var imageAt=0;
+		function trainNext() {
+			var idata=trainingImages[imageAt];
+			imageAt++;
+			if (!idata) {
+				return getNextImage();
+			}
+			var image=new Image();
+			image.addEventListener('load', ()=>{
+				const activation = net.infer(image, true);
+				classifier.addExample(activation, idata[0]);
+				trainNext();
+			});
+			image.src=idata[1];
+		}
+		trainNext();
 	}
+	else {
+		$('#results').text('no training data. please use the classifier below to get it started');
+		getNextImage();
+	}
+	$classifiers.find('input').change(function() {
+		var key=$(this).val().trim();
+		if (!key) {
+			return;
+		}
+		addExample(key);
+		$('<button/>').text(key).prependTo($classifiers);
+		$(this).val('');
+	});
 }
 $(()=>{
 	app();

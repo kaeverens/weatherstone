@@ -34,8 +34,8 @@ echo 'const training_data='.json_encode($training_data).';';
 		<img id="img"/>
 		<div id="filename"></div>
 		<h3>What the computer thinks it means</h3>
-		<div id="results">please wait... loading</div>
+		<div id="results">please wait... training</div>
 		<h3>If the result is incorrect, add a new classification for the image you see</h3>
-		<div id="classifiers"></div>
+		<div id="classifiers"><input placeholder="add new..."/></div>
 	</body>
 </html>
