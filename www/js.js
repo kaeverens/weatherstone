@@ -1,9 +1,12 @@
-let $img, net, classifier, classNames = ['Overcast', 'Sunny', 'Raining', 'Breezy'];
+let $img, net, classifier;
+const classNames = ['Overcast', 'Sunny', 'Raining', 'Breezy', 'Wet', 'Dry'];
 classifier = knnClassifier.create();
 async function app() {
+	let currentSrc;
 	function getNextImage() {
 		$.post('/php/image-get.php', r=>{
 			$('#filename').text(r.url);
+			currentSrc=r.url;
 			$img.attr('src', r.url);
 		});
 	}
@@ -41,9 +44,18 @@ async function app() {
 	for (let i=0;i<classNames.length;++i) {
 		$('<button data-idx="'+i+'"/>').text(classNames[i]).appendTo($classifiers);
 	}
-	async function addExample(classId) {
+	async function addExample(className) {
 		const activation = net.infer($img[0], true);
-		classifier.addExample(activation, classId);
+		$.post('/php/trainingAdd.php', {
+			className:className,
+			image:currentSrc
+		}, r=>{
+			console.log(r);
+			if (r.error) {
+				alert(r.error);
+			}
+		});
+		classifier.addExample(activation, className);
 	}
 }
 $(()=>{

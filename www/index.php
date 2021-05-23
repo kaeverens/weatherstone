@@ -5,6 +5,28 @@
 		<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 		<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 		<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+		<script>
+<?php
+$training_data=[];
+$dirs=new DirectoryIterator('../training_data');
+foreach ($dirs as $dir) {
+	if ($dir->isDot()) {
+		continue;
+	}
+	$arr=[];
+	$dname=$dir->getFilename();
+	$dirs2=new DirectoryIterator('../training_data/'.$dname);
+	foreach ($dirs2 as $dir2) {
+		if ($dir2->isDot()) {
+			continue;
+		}
+		$arr[]=base64_decode($dir2->getFilename());
+	}
+	$training_data[$dname]=$arr;
+}
+echo 'const training_data='.json_encode($training_data).';';
+?>
+		</script>
 		<script src="js.js"></script>
 	</head>
 	<body>
